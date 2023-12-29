@@ -1,0 +1,13 @@
+{
+  "extends": "@tsconfig/node20/tsconfig.json",
+  "include": ["src/**/*", "rollup.config.ts"],
+  "compilerOptions": {
+    "declaration": true,
+    "declarationDir": "",
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "rootDir": "./src",
+    "types": ["node"]
+  }
+}

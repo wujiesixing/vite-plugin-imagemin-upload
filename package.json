@@ -1,0 +1,84 @@
+{
+  "name": "vite-plugin-imagemin-upload",
+  "version": "1.0.0",
+  "description": "Compress the image and then upload it to either AWS S3 or Aliyun OSS.",
+  "type": "module",
+  "main": "index.cjs",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.cjs",
+      "types": "./index.d.ts"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.cjs",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "rollup --config rollup.config.ts --configPlugin typescript",
+    "test": "rollup --config rollup.config.ts --configPlugin typescript --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wujiesixing/vite-plugin-imagemin-upload.git"
+  },
+  "keywords": [
+    "compress",
+    "aws",
+    "s3",
+    "aliyun",
+    "oss",
+    "vite",
+    "imagemin",
+    "upload"
+  ],
+  "author": "Gavin <wujiesixing@outlook.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.481.0",
+    "@rollup/pluginutils": "^5.1.0",
+    "ali-oss": "^6.19.0",
+    "chalk": "^5.3.0",
+    "file-type": "^18.7.0",
+    "imagemin": "^8.0.1",
+    "imagemin-gifsicle": "^7.0.0",
+    "imagemin-jpegtran": "^7.0.0",
+    "imagemin-mozjpeg": "^10.0.0",
+    "imagemin-optipng": "^8.0.0",
+    "imagemin-pngquant": "^9.0.2",
+    "imagemin-svgo": "^10.0.1",
+    "imagemin-webp": "^8.0.0",
+    "lodash-es": "^4.17.21",
+    "postcss": "^8.4.32",
+    "webp-in-css": "^0.8.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@tsconfig/node20": "^20.1.2",
+    "@types/ali-oss": "^6.16.11",
+    "@types/imagemin": "^8.0.5",
+    "@types/imagemin-gifsicle": "^7.0.4",
+    "@types/imagemin-jpegtran": "^5.0.4",
+    "@types/imagemin-mozjpeg": "^8.0.4",
+    "@types/imagemin-optipng": "^5.2.4",
+    "@types/imagemin-svgo": "^10.0.5",
+    "@types/imagemin-webp": "^7.0.3",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^20.10.5",
+    "@types/webp-in-css": "^0.7.5",
+    "rollup": "^4.9.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=8"
+  }
+}
