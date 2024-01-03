@@ -207,8 +207,13 @@ function imageminUpload(userOptions = {}) {
                     if (compressionType) {
                         assets[compressionType].add(filepath);
                         let url = baseURL ? joinURL(baseURL, dir, filename) : filename;
-                        const query = "imagemin-upload-format=webp";
-                        return [url, query].join(url.includes("?") ? "&" : "?");
+                        if (options[compressionType]?.webp) {
+                            const query = "imagemin-upload-format=webp";
+                            return [url, query].join(url.includes("?") ? "&" : "?");
+                        }
+                        if (baseURL) {
+                            return url;
+                        }
                     }
                     if (renderBuiltUrl) {
                         return renderBuiltUrl(filename, {
