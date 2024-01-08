@@ -14,8 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
           const src = node.src;
-          const reg =
-            /^([^#?]+\.)webp(\?([^#]*&)?from-format=(jpe?g|png|gif|svg)([&#].*)?)$/i;
+          const reg = new RegExp(
+            "^([^#?]+\\.)webp(\\?([^#]*&)?from-format=(jpe?g|png|gif|svg)([&#].*)?)$",
+            "i"
+          );
 
           if (reg.test(src)) {
             node.src = src.replace(
