@@ -395,7 +395,9 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
 
             assets[compressionType].add(filepath);
 
-            let url = baseURL ? joinURL(baseURL, dir, filename) : filename;
+            let url = baseURL
+              ? joinURL(baseURL, dir, basename(filename))
+              : filename;
 
             if (options[compressionType]?.webp && !/\.webp$/.test(filepath)) {
               return url.replace(

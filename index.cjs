@@ -210,7 +210,9 @@ function imageminUpload(userOptions = {}) {
                     if (compressionType) {
                         enabled = true;
                         assets[compressionType].add(filepath);
-                        let url = baseURL ? joinURL(baseURL, dir, filename) : filename;
+                        let url = baseURL
+                            ? joinURL(baseURL, dir, node_path.basename(filename))
+                            : filename;
                         if (options[compressionType]?.webp && !/\.webp$/.test(filepath)) {
                             return url.replace(/^([^#?]+\.)(jpe?g|png|gif|svg)(\?[^#]*)?(#.*)?$/i, (match, p1, p2, p3, p4) => {
                                 if (hostType === "js") {
