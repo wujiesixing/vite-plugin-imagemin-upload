@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
             /^([^#?]+\.)webp(\?([^#]*&)?from-format=(jpe?g|png|gif|svg)([&#].*)?)$/i;
 
           if (reg.test(src)) {
-            img.src = src.replace(
+            node.src = src.replace(
               reg,
               (match, p1, p2, p3, p4) => `${p1}${p4}${p2}`
             );
