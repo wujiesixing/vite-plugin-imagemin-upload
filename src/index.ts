@@ -464,10 +464,12 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
             this.emitFile({
               type: "asset",
               fileName: filename,
-              source: (file.source as string).replace(
-                /<\/head>/i,
-                `<script>replace-polyfill</script></head>`
-              ),
+              source: (file.source as string)
+                .replace(
+                  /<\/head>/i,
+                  `<script>replace-polyfill</script></head>`
+                )
+                .replaceAll("\\", "\\\\"),
             });
 
             continue;
