@@ -23,6 +23,11 @@ const getDefaultOptions = () => ({
         include: /\.(jpe?g|png|gif|svg)$/i,
         progressive: true,
         interlaced: true,
+        gifsicle: true,
+        jpegtran: true,
+        optipng: true,
+        svgo: true,
+        webp: true,
     },
     lossy: {
         type: "asset",
@@ -30,6 +35,11 @@ const getDefaultOptions = () => ({
         quality: 80,
         progressive: true,
         interlaced: true,
+        gifsicle: true,
+        mozjpeg: true,
+        pngquant: true,
+        svgo: true,
+        webp: true,
     },
 });
 const urlRE = /^(https?:)?\/\/.+/i;
@@ -50,54 +60,46 @@ function joinURL(base, ...paths) {
 function getPlugins(filename, options, compressionType) {
     const plugins = [];
     const opts = options[compressionType];
-    if (/\.svg$/i.test(filename) && opts?.svgo !== false) {
-        plugins.push(imageminSvgo(defaultsDeep({}, opts?.svgo)));
+    if (/\.svg$/i.test(filename) && opts?.svgo) {
+        plugins.push(imageminSvgo(defaultsDeep({}, opts.svgo)));
     }
-    if (/\.gif$/i.test(filename) && opts?.gifsicle !== false) {
-        plugins.push(imageminGifsicle(defaultsDeep({}, opts?.gifsicle, {
+    if (/\.gif$/i.test(filename) && opts?.gifsicle) {
+        plugins.push(imageminGifsicle(defaultsDeep({}, opts.gifsicle, {
             optimizationLevel: 3,
-            interlaced: !!opts?.interlaced,
+            interlaced: !!opts.interlaced,
         })));
     }
     if (compressionType === "lossless") {
         const losslessOptions = options.lossless;
-        if (/\.jpe?g$/i.test(filename) && losslessOptions?.jpegtran !== false) {
-            plugins.push(imageminJpegtran(defaultsDeep({}, losslessOptions?.jpegtran, {
-                progressive: !!losslessOptions?.progressive,
+        if (/\.jpe?g$/i.test(filename) && losslessOptions?.jpegtran) {
+            plugins.push(imageminJpegtran(defaultsDeep({}, losslessOptions.jpegtran, {
+                progressive: !!losslessOptions.progressive,
             })));
         }
-        if (/\.png$/i.test(filename) && losslessOptions?.optipng !== false) {
-            plugins.push(imageminOptipng(defaultsDeep({}, losslessOptions?.optipng, {
+        if (/\.png$/i.test(filename) && losslessOptions?.optipng) {
+            plugins.push(imageminOptipng(defaultsDeep({}, losslessOptions.optipng, {
                 optimizationLevel: 7,
-                interlaced: !!losslessOptions?.interlaced,
+                interlaced: !!losslessOptions.interlaced,
             })));
         }
         if (losslessOptions?.webp) {
-            plugins.push(imageminWebp(defaultsDeep({}, losslessOptions?.webp, {
+            plugins.push(imageminWebp(defaultsDeep({}, losslessOptions.webp, {
                 lossless: 9,
             })));
         }
     }
     if (compressionType === "lossy") {
         const lossyOptions = options.lossy;
-        if (/\.jpe?g$/i.test(filename) && lossyOptions?.mozjpeg !== false) {
-            plugins.push(imageminMozjpeg(defaultsDeep({}, lossyOptions?.mozjpeg, {
-                progressive: !!lossyOptions?.progressive,
-            }, lossyOptions?.quality ? { quality: lossyOptions?.quality } : {})));
+        if (/\.jpe?g$/i.test(filename) && lossyOptions?.mozjpeg) {
+            plugins.push(imageminMozjpeg(defaultsDeep({}, lossyOptions.mozjpeg, { progressive: !!lossyOptions.progressive }, lossyOptions.quality ? { quality: lossyOptions.quality } : {})));
         }
-        if (/\.png$/i.test(filename) && lossyOptions?.pngquant !== false) {
-            plugins.push(imageminPngquant(defaultsDeep({}, lossyOptions?.pngquant, {
-                speed: 1,
-            }, lossyOptions?.quality
-                ? {
-                    quality: [lossyOptions?.quality / 100, 1],
-                }
+        if (/\.png$/i.test(filename) && lossyOptions?.pngquant) {
+            plugins.push(imageminPngquant(defaultsDeep({}, lossyOptions.pngquant, { speed: 1 }, lossyOptions.quality
+                ? { quality: [lossyOptions.quality / 100, 1] }
                 : {})));
         }
         if (lossyOptions?.webp) {
-            plugins.push(imageminWebp(defaultsDeep({}, lossyOptions?.webp, {
-                method: 6,
-            }, lossyOptions?.quality ? { quality: lossyOptions?.quality } : {})));
+            plugins.push(imageminWebp(defaultsDeep({}, lossyOptions.webp, { method: 6 }, lossyOptions.quality ? { quality: lossyOptions.quality } : {})));
         }
     }
     return plugins;
@@ -190,6 +192,7 @@ function imageminUpload(userOptions = {}) {
         lossless: createFilter(options.lossless?.include, options.lossless?.exclude),
         lossy: createFilter(options.lossy?.include, options.lossy?.exclude),
     };
+    let enabled = false;
     return {
         name: "vite:imagemin-upload",
         apply: "build",
@@ -203,11 +206,16 @@ function imageminUpload(userOptions = {}) {
                     const compressionType = ["lossless", "lossy"].find((compressionType) => type === options[compressionType]?.type &&
                         filter[compressionType](filepath));
                     if (compressionType) {
+                        enabled = true;
                         assets[compressionType].add(filepath);
                         let url = baseURL ? joinURL(baseURL, dir, filename) : filename;
-                        if (options[compressionType]?.webp) {
-                            const query = "imagemin-upload-format=webp";
-                            return [url, query].join(url.includes("?") ? "&" : "?");
+                        if (options[compressionType]?.webp && !/\.webp$/.test(filepath)) {
+                            return url.replace(/^([^#?]+\.)(jpe?g|png|gif|svg)(\?[^#]*)?(#.*)?$/i, (match, p1, p2, p3, p4) => {
+                                if (hostType === "js") {
+                                    return `${p1}webp${p3?.length > 1 ? p3 + "&" : "?"}from-format=${p2}${p4 || ""}`;
+                                }
+                                return `${p1}${p2}${p3?.length > 1 ? p3 + "&" : "?"}to-format=webp${p4 || ""}`;
+                            });
                         }
                         if (baseURL) {
                             return url;
@@ -227,6 +235,8 @@ function imageminUpload(userOptions = {}) {
         generateBundle: {
             order: "post",
             async handler(outputOptions, bundle) {
+                if (!enabled)
+                    return;
                 for (const [filename, file] of Object.entries(bundle)) {
                     if (file.type !== "asset")
                         continue;
@@ -237,7 +247,7 @@ function imageminUpload(userOptions = {}) {
                             fileName: filename,
                             source: postcss([
                                 webpInCssPlugin({
-                                    check: (decl) => /\.(jpe?g|png|gif|svg)\?(.*&)?imagemin-upload-format=webp/i.test(decl.value),
+                                    check: (decl) => /^[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?$/i.test(decl.value),
                                 }),
                             ]).process(file.source).css,
                         });
@@ -248,7 +258,8 @@ function imageminUpload(userOptions = {}) {
                         this.emitFile({
                             type: "asset",
                             fileName: filename,
-                            source: file.source.replace(/<\/head>/i, `<script>document.body.classList.remove('no-js');var i=new Image;i.onload=i.onerror=function(){document.body.classList.add(i.height==1?"webp":"no-webp")};i.src="data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==";</script></head>`),
+                            source: file.source.replace(/<\/head>/i, `<script>!function(){"use strict";document.addEventListener("DOMContentLoaded",(function(){document.body.classList.remove("no-js");var e=new Image;e.onload=e.onerror=function(){var t=1===e.height;if(document.body.classList.add(t?"webp":"no-webp"),!t){var o=function(t){if(t instanceof HTMLImageElement)try{var o=t.src,n=/^([^#?]+\.)webp(\?([^#]*&)?from-format=(jpe?g|png|gif|svg)([&#].*)?)$/i;n.test(o)&&(e.src=o.replace(n,(function(e,t,o,n,a){return"".concat(t).concat(a).concat(o)})))}catch(e){console.log("[vite:imagemin-upload] "+(null==e?void 0:e.message))}};document.body.querySelectorAll("img").forEach(o),new MutationObserver((function(e){try{for(var t=0,n=e;t<n.length;t++){var a=n[t];"attributes"===a.type&&["src"].includes(a.attributeName||"")?o(a.target):"childList"===a.type&&a.addedNodes.forEach((function(e){e instanceof HTMLImageElement?o(e):e instanceof Element&&e.querySelectorAll("img").forEach(o)}))}}catch(e){console.log("[vite:imagemin-upload] "+(null==e?void 0:e.message))}})).observe(document.body,{subtree:!0,childList:!0,attributes:!0,attributeFilter:["src"],characterData:!1})}},e.src="data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="}))}();
+</script></head>`),
                         });
                         continue;
                     }

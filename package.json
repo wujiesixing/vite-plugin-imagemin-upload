@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-imagemin-upload",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "Compress the image and then upload it to either AWS S3 or Aliyun OSS.",
   "type": "module",
   "main": "index.cjs",
@@ -57,8 +57,8 @@
     "webp-in-css": "^0.8.0"
   },
   "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.5",
-    "@tsconfig/node20": "^20.1.2",
     "@types/ali-oss": "^6.16.11",
     "@types/imagemin": "^8.0.5",
     "@types/imagemin-gifsicle": "^7.0.4",

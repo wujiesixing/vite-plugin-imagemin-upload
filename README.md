@@ -1,6 +1,6 @@
 # Vite Plugin: vite-plugin-imagemin-upload
 
-`vite-plugin-imagemin-upload` is a Vite plugin that enables image compression and upload to cloud storage services like AWS S3 or Alibaba Cloud OSS during the build process. It utilizes various image optimization plugins such as imagemin to compress images and then uploads the optimized images to the specified cloud storage.
+`vite-plugin-imagemin-upload` is a Vite plugin that facilitates image compression and upload to cloud storage services such as AWS S3 or Alibaba Cloud OSS during the build process. It leverages various image optimization plugins like imagemin to compress images and then uploads the optimized images to the specified cloud storage.
 
 ## Installation
 
@@ -44,7 +44,7 @@ export default {
 - `jpegtran`: Configuration for imagemin-jpegtran (default: true).
 - `optipng`: Configuration for imagemin-optipng (default: true).
 - `svgo`: Configuration for imagemin-svgo (default: true).
-- `webp`: Configuration for imagemin-webp (default: false).
+- `webp`: Configuration for imagemin-webp (default: true).
 
 ### `lossy` (optional)
 
@@ -62,7 +62,7 @@ export default {
 - `mozjpeg`: Configuration for imagemin-mozjpeg (default: true).
 - `pngquant`: Configuration for imagemin-pngquant (default: true).
 - `svgo`: Configuration for imagemin-svgo (default: true).
-- `webp`: Configuration for imagemin-webp (default: false).
+- `webp`: Configuration for imagemin-webp (default: true).
 
 ### `s3` (optional)
 
@@ -90,6 +90,17 @@ export default {
 
 ## Example
 
+### Example for Compression Only (No Upload):
+
+```javascript
+// vite.config.js or vite.config.ts
+import imageminUpload from "vite-plugin-imagemin-upload";
+
+export default {
+  plugins: [imageminUpload()],
+};
+```
+
 ### Example for S3 Configuration:
 
 ```javascript
@@ -100,12 +111,6 @@ import { name } from "./package.json";
 export default {
   plugins: [
     imageminUpload({
-      lossless: {
-        webp: true,
-      },
-      lossy: {
-        webp: true,
-      },
       s3: {
         baseURL: "https://your-s3-bucket.s3.amazonaws.com",
         dir: name + "/images",
@@ -139,12 +144,6 @@ import { name } from "./package.json";
 export default {
   plugins: [
     imageminUpload({
-      lossless: {
-        webp: true,
-      },
-      lossy: {
-        webp: true,
-      },
       oss: {
         baseURL: "https://your-oss-bucket.oss-cn-hangzhou.aliyuncs.com",
         dir: name + "/images",
