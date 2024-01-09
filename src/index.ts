@@ -448,7 +448,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
               source: postcss([
                 webpInCssPlugin({
                   check: (decl) =>
-                    /^[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?$/i.test(
+                    /[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?/i.test(
                       decl.value
                     ),
                 }),

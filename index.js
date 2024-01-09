@@ -249,7 +249,7 @@ function imageminUpload(userOptions = {}) {
                             fileName: filename,
                             source: postcss([
                                 webpInCssPlugin({
-                                    check: (decl) => /^[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?$/i.test(decl.value),
+                                    check: (decl) => /[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?/i.test(decl.value),
                                 }),
                             ]).process(file.source).css,
                         });
