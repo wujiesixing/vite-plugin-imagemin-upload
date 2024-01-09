@@ -12,7 +12,7 @@ npm install vite-plugin-imagemin-upload --save-dev
 
 ```javascript
 // vite.config.js or vite.config.ts
-import imageminUpload from "vite-plugin-imagemin-upload";
+import { imageminUpload } from "vite-plugin-imagemin-upload";
 
 export default {
   plugins: [
@@ -94,7 +94,7 @@ export default {
 
 ```javascript
 // vite.config.js or vite.config.ts
-import imageminUpload from "vite-plugin-imagemin-upload";
+import { imageminUpload } from "vite-plugin-imagemin-upload";
 
 export default {
   plugins: [imageminUpload()],
@@ -105,7 +105,7 @@ export default {
 
 ```javascript
 // vite.config.js or vite.config.ts
-import imageminUpload from "vite-plugin-imagemin-upload";
+import { imageminUpload } from "vite-plugin-imagemin-upload";
 import { name } from "./package.json";
 
 export default {
@@ -138,7 +138,7 @@ export default {
 
 ```javascript
 // vite.config.js or vite.config.ts
-import imageminUpload from "vite-plugin-imagemin-upload";
+import { imageminUpload } from "vite-plugin-imagemin-upload";
 import { name } from "./package.json";
 
 export default {
