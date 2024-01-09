@@ -13,15 +13,28 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!(node instanceof HTMLImageElement)) return;
 
         try {
-          const src = node.src;
-          const reg = new RegExp(
-            "^([^#?]+\\.)webp(\\?([^#]*&)?from-format=(jpe?g|png|gif|svg)([&#].*)?)$",
-            "i"
-          );
+          const reg =
+            "[^#?]+\\.)webp(\\?([^#]*&)?from-format=(jpe?g|png|gif|svg)([&#].*)?";
 
-          if (reg.test(src)) {
+          const srcset = node.srcset;
+          const regSrcset = new RegExp(`^(\\s*${reg}(\\s+\\S+)?\\s*)$`, "i");
+          if (srcset && regSrcset.test(srcset)) {
+            node.srcset = srcset
+              .split(",")
+              .map((src) => {
+                return src.replace(
+                  regSrcset,
+                  (match, p1, p2, p3, p4) => `${p1}${p4}${p2}`
+                );
+              })
+              .join(",");
+          }
+
+          const src = node.src;
+          const regSrc = new RegExp(`^(${reg})$`, "i");
+          if (src && regSrc.test(src)) {
             node.src = src.replace(
-              reg,
+              regSrc,
               (match, p1, p2, p3, p4) => `${p1}${p4}${p2}`
             );
           }
@@ -37,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
           for (const mutation of mutationsList) {
             if (
               mutation.type === "attributes" &&
-              ["src"].includes(mutation.attributeName || "")
+              ["src", "srcset"].includes(mutation.attributeName || "")
             ) {
               fallback(mutation.target);
               continue;
@@ -63,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
         subtree: true,
         childList: true,
         attributes: true,
-        attributeFilter: ["src"],
+        attributeFilter: ["src", "srcset"],
         characterData: false,
       });
     }
