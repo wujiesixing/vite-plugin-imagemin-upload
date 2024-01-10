@@ -448,7 +448,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
               source: postcss([
                 webpInCssPlugin({
                   check: (decl) =>
-                    /[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?/i.test(
+                    /^url\(['"]?[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?['"]?\)$/i.test(
                       decl.value
                     ),
                 }),
@@ -525,7 +525,10 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
 
                     upload(newFilebasename, newBuffer, options);
 
-                    if (filename === newFilename) {
+                    if (
+                      filename.replace(/\.jpeg$/i, ".jpg") ===
+                      newFilename.replace(/\.jpeg$/i, ".jpg")
+                    ) {
                       delete bundle[filename];
                     }
 

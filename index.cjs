@@ -251,7 +251,7 @@ function imageminUpload(userOptions = {}) {
                             fileName: filename,
                             source: postcss([
                                 webpInCssPlugin({
-                                    check: (decl) => /[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?/i.test(decl.value),
+                                    check: (decl) => /^url\(['"]?[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?to-format=webp([&#].*)?['"]?\)$/i.test(decl.value),
                                 }),
                             ]).process(file.source).css,
                         });
@@ -295,7 +295,8 @@ function imageminUpload(userOptions = {}) {
                                 const newFilebasename = node_path.basename(newFilename);
                                 console.log("\n[vite:imagemin-upload] " + filebasename, size, newFilebasename, size <= newSize ? chalk.red(newSize) : newSize);
                                 upload(newFilebasename, newBuffer, options);
-                                if (filename === newFilename) {
+                                if (filename.replace(/\.jpeg$/i, ".jpg") ===
+                                    newFilename.replace(/\.jpeg$/i, ".jpg")) {
                                     delete bundle[filename];
                                 }
                                 if (!baseURL) {
