@@ -25,7 +25,9 @@ import imageminWebp, {
   type Options as ImageminWebpOptions,
 } from "imagemin-webp";
 import { defaultsDeep } from "lodash-es";
-import { basename } from "node:path";
+import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, resolve } from "node:path";
 import postcss from "postcss";
 import { type Plugin } from "vite";
 import webpInCssPlugin from "webp-in-css/plugin.js";
@@ -181,7 +183,7 @@ function getPlugins(
       );
     }
 
-    if (losslessOptions?.webp) {
+    if (!noWebpAssets.has(filename) && losslessOptions?.webp) {
       plugins.push(
         imageminWebp(
           defaultsDeep({}, losslessOptions.webp, {
@@ -223,7 +225,7 @@ function getPlugins(
       );
     }
 
-    if (lossyOptions?.webp) {
+    if (!noWebpAssets.has(filename) && lossyOptions?.webp) {
       plugins.push(
         imageminWebp(
           defaultsDeep(
@@ -237,6 +239,80 @@ function getPlugins(
     }
   }
   return plugins;
+}
+
+async function compression(
+  filename: string,
+  buffer: Buffer,
+  options: Options,
+  compressionType: "lossless" | "lossy"
+) {
+  const filebasename = basename(filename);
+  const fileextname = extname(filename);
+
+  const size = buffer.byteLength;
+
+  const fileTypeResult = await fileTypeFromBuffer(buffer);
+  if (!fileTypeResult)
+    throw new Error(`Cannot retrieve the file type of ${filename}.`);
+
+  return await Promise.all(
+    getPlugins(filename, options, compressionType).map(async (plugin) => {
+      const newBuffer = await imageminjs.buffer(buffer, {
+        plugins: [plugin],
+      });
+      const newSize = newBuffer.byteLength;
+
+      const newFileTypeResult = await fileTypeFromBuffer(newBuffer);
+
+      if (!newFileTypeResult)
+        throw new Error(`Cannot retrieve the file type of ${filename}.`);
+
+      const isOriginExt = fileTypeResult.ext === newFileTypeResult.ext;
+
+      const newFilename = filename.replace(
+        /\.[^.]+$/g,
+        isOriginExt ? fileextname : "." + newFileTypeResult.ext
+      );
+
+      const newFilebasename = basename(newFilename);
+
+      console.log(
+        "\n[vite:imagemin-upload] " + filebasename,
+        size,
+        newFilebasename,
+        size <= newSize ? chalk.red(newSize) : newSize
+      );
+
+      if (size <= newSize) {
+        if (isOriginExt) {
+          console.log(
+            "\n[vite:imagemin-upload] " +
+              chalk.yellow(`${filebasename} still uses the original file.`)
+          );
+        } else {
+          console.log(
+            "\n[vite:imagemin-upload] " +
+              chalk.red(
+                `The volume of ${filebasename} has increased after being compressed into ${newFileTypeResult.ext}!`
+              ) +
+              "\n[vite:imagemin-upload] " +
+              chalk.yellow(
+                `You can add the parameter ${chalk.red(
+                  `no-webp`
+                )} at the end of the image path to prevent conversion to webp.`
+              )
+          );
+        }
+      }
+
+      return {
+        filename: newFilename,
+        filebasename: newFilebasename,
+        buffer: size <= newSize && isOriginExt ? buffer : newBuffer,
+      };
+    })
+  );
 }
 
 let s3Client: S3Client;
@@ -340,10 +416,19 @@ function upload(filebasename: string, buffer: Buffer, options: Options) {
   }
 }
 
+let outDir: string;
+let publicDir: string;
+
 const assets = {
   lossless: new Set<string>(),
   lossy: new Set<string>(),
 };
+const publicAssets = {
+  lossless: new Set<string>(),
+  lossy: new Set<string>(),
+};
+
+const noWebpAssets = new Set<string>();
 
 export function imageminUpload(userOptions: Options = {}): Plugin {
   const options: Options = defaultsDeep({}, userOptions, getDefaultOptions());
@@ -367,7 +452,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
     lossy: createFilter(options.lossy?.include, options.lossy?.exclude),
   };
 
-  let enabled = false;
+  let polyfill = false;
 
   return {
     name: "vite:imagemin-upload",
@@ -391,7 +476,19 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
           );
 
           if (compressionType) {
-            enabled = true;
+            const noWebp =
+              /^['"]?[^#?]+\.(jpe?g|png|gif|svg)\?([^#]*&)?no-webp([&#].*)?['"]?$/i.test(
+                filename
+              );
+
+            if (noWebp) noWebpAssets.add(filepath);
+
+            if (type === "public") {
+              publicAssets[compressionType].add(filepath);
+              return;
+            }
+
+            polyfill = true;
 
             assets[compressionType].add(filepath);
 
@@ -399,7 +496,11 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
               ? joinURL(baseURL, dir, basename(filename))
               : filename;
 
-            if (options[compressionType]?.webp && !/\.webp$/.test(filepath)) {
+            if (
+              options[compressionType]?.webp &&
+              !/\.webp$/.test(filepath) &&
+              !noWebp
+            ) {
               return url.replace(
                 /^([^#?]+\.)(jpe?g|png|gif|svg)(\?[^#]*)?(#.*)?$/i,
                 (match, p1, p2, p3, p4) => {
@@ -431,10 +532,46 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
         };
       }
     },
+    configResolved(resolvedConfig) {
+      if (resolvedConfig.mode === options.mode) {
+        outDir = resolve(resolvedConfig.root, resolvedConfig.build.outDir);
+        publicDir = resolvedConfig.publicDir;
+      }
+    },
     generateBundle: {
       order: "post",
       async handler(outputOptions, bundle) {
-        if (!enabled) return;
+        for (const compressionType of ["lossless", "lossy"] as const) {
+          for (let filename of publicAssets[compressionType]) {
+            const buffer = await readFile(resolve(publicDir, filename));
+            const dir = resolve(outDir, dirname(filename));
+            try {
+              for (let {
+                filebasename: newFilebasename,
+                buffer: newBuffer,
+              } of await compression(
+                filename,
+                buffer,
+                options,
+                compressionType
+              )) {
+                if (!existsSync(dir)) {
+                  await mkdir(dir, { recursive: true });
+                }
+                await writeFile(resolve(dir, newFilebasename), newBuffer);
+              }
+            } catch (error) {
+              console.log(
+                "\n[vite:imagemin-upload] " +
+                  chalk.red(`Compression of ${filename} failed.`) +
+                  "\n[vite:imagemin-upload] " +
+                  chalk.red(error.message)
+              );
+            }
+          }
+        }
+
+        if (!polyfill) return;
 
         for (const [filename, file] of Object.entries(bundle)) {
           if (file.type !== "asset") continue;
@@ -491,66 +628,39 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
             }
 
             const buffer = Buffer.from(file.source);
-            const size = buffer.byteLength;
+            try {
+              for (let {
+                filename: newFilename,
+                filebasename: newFilebasename,
+                buffer: newBuffer,
+              } of await compression(
+                filename,
+                buffer,
+                options,
+                compressionType
+              )) {
+                upload(newFilebasename, newBuffer, options);
 
-            await Promise.all(
-              getPlugins(filename, options, compressionType).map(
-                async (plugin) => {
-                  try {
-                    const newBuffer = await imageminjs.buffer(buffer, {
-                      plugins: [plugin],
-                    });
-                    const newSize = newBuffer.byteLength;
-
-                    const fileTypeResult = await fileTypeFromBuffer(newBuffer);
-
-                    if (!fileTypeResult)
-                      throw new Error(
-                        `Cannot retrieve the file type of ${filename}.`
-                      );
-
-                    const newFilename = filename.replace(
-                      /\.[^.]+$/g,
-                      "." + fileTypeResult.ext
-                    );
-
-                    const filebasename = basename(filename);
-                    const newFilebasename = basename(newFilename);
-
-                    console.log(
-                      "\n[vite:imagemin-upload] " + filebasename,
-                      size,
-                      newFilebasename,
-                      size <= newSize ? chalk.red(newSize) : newSize
-                    );
-
-                    upload(newFilebasename, newBuffer, options);
-
-                    if (
-                      filename.replace(/\.jpeg$/i, ".jpg") ===
-                      newFilename.replace(/\.jpeg$/i, ".jpg")
-                    ) {
-                      delete bundle[filename];
-                    }
-
-                    if (!baseURL) {
-                      this.emitFile({
-                        type: "asset",
-                        fileName: newFilename,
-                        source: newBuffer,
-                      });
-                    }
-                  } catch (error) {
-                    console.log(
-                      "\n[vite:imagemin-upload] " +
-                        chalk.red(`Compression of ${filename} failed.`) +
-                        "\n[vite:imagemin-upload] " +
-                        chalk.red(error.message)
-                    );
-                  }
+                if (filename === newFilename) {
+                  delete bundle[filename];
                 }
-              )
-            );
+
+                if (!baseURL) {
+                  this.emitFile({
+                    type: "asset",
+                    fileName: newFilename,
+                    source: newBuffer,
+                  });
+                }
+              }
+            } catch (error) {
+              console.log(
+                "\n[vite:imagemin-upload] " +
+                  chalk.red(`Compression of ${filename} failed.`) +
+                  "\n[vite:imagemin-upload] " +
+                  chalk.red(error.message)
+              );
+            }
           }
         }
       },
