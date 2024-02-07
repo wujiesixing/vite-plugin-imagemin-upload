@@ -294,7 +294,7 @@ async function compression(
           console.log(
             "\n[vite:imagemin-upload] " +
               chalk.red(
-                `The volume of ${filebasename} has increased after being compressed into ${newFileTypeResult.ext}!`
+                `The volume of ${filebasename} has increased after being compressed into webp!`
               ) +
               "\n[vite:imagemin-upload] " +
               chalk.yellow(

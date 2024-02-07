@@ -134,7 +134,7 @@ async function compression(filename, buffer, options, compressionType) {
             }
             else {
                 console.log("\n[vite:imagemin-upload] " +
-                    chalk.red(`The volume of ${filebasename} has increased after being compressed into ${newFileTypeResult.ext}!`) +
+                    chalk.red(`The volume of ${filebasename} has increased after being compressed into webp!`) +
                     "\n[vite:imagemin-upload] " +
                     chalk.yellow(`You can add the parameter ${chalk.red(`no-webp`)} at the end of the image path to prevent conversion to webp.`));
             }

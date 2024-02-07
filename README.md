@@ -159,6 +159,41 @@ export default {
 };
 ```
 
+### Example for Not Converting WEBP:
+
+```javascript
+// vite.config.js or vite.config.ts
+import { imageminUpload } from "vite-plugin-imagemin-upload";
+import { name } from "./package.json";
+
+export default {
+  plugins: [
+    imageminUpload({
+      lossless: {
+        // All lossless compressions will not be converted to webp.
+        webp: false,
+      },
+      lossy: {
+        // All lossy compressions will not be converted to webp.
+        webp: false,
+      },
+    }),
+  ],
+};
+```
+
+```html
+<!-- html -->
+<!-- This image will not be converted to webp. -->
+<img src="@/assets/images/logo.png?no-webp" />
+```
+
+```css
+/* css */
+/* This image will not be converted to webp. */
+background-image: url("@/assets/images/logo.png?no-webp");
+```
+
 ## License
 
 This plugin is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
