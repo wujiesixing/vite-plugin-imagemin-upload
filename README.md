@@ -93,6 +93,11 @@ export default {
 ### Example for Compression Only (No Upload):
 
 ```javascript
+// main.js or main.ts
+import "vite-plugin-imagemin-upload/polyfill";
+```
+
+```javascript
 // vite.config.js or vite.config.ts
 import { imageminUpload } from "vite-plugin-imagemin-upload";
 
@@ -102,6 +107,11 @@ export default {
 ```
 
 ### Example for S3 Configuration:
+
+```javascript
+// main.js or main.ts
+import "vite-plugin-imagemin-upload/polyfill";
+```
 
 ```javascript
 // vite.config.js or vite.config.ts
@@ -135,6 +145,11 @@ export default {
 ```
 
 ### Example for OSS Configuration:
+
+```javascript
+// main.js or main.ts
+import "vite-plugin-imagemin-upload/polyfill";
+```
 
 ```javascript
 // vite.config.js or vite.config.ts

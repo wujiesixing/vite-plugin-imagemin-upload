@@ -647,14 +647,5 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
         }
       },
     },
-    transformIndexHtml: {
-      order: "post",
-      handler(html) {
-        return html.replace(
-          /<\/head>/i,
-          `<script>replace-polyfill</script></head>`.replaceAll("\\", "\\\\")
-        );
-      },
-    },
   };
 }
