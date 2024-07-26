@@ -271,10 +271,10 @@ function imageminUpload(userOptions = {}) {
                             !/\.webp$/.test(filepath) &&
                             !noWebp) {
                             return url.replace(/^([^#?]+\.)(jpe?g|png|gif|svg)(\?[^#]*)?(#.*)?$/i, (match, p1, p2, p3, p4) => {
-                                if (hostType === "js") {
-                                    return `${p1}webp${p3?.length > 1 ? p3 + "&" : "?"}from-format=${p2}${p4 || ""}`;
+                                if (hostType === "css") {
+                                    return `${p1}${p2}${p3?.length > 1 ? p3 + "&" : "?"}to-format=webp${p4 || ""}`;
                                 }
-                                return `${p1}${p2}${p3?.length > 1 ? p3 + "&" : "?"}to-format=webp${p4 || ""}`;
+                                return `${p1}webp${p3?.length > 1 ? p3 + "&" : "?"}from-format=${p2}${p4 || ""}`;
                             });
                         }
                         if (baseURL) {
