@@ -595,24 +595,6 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
             continue;
           }
 
-          if (/\.html?$/.test(filename)) {
-            delete bundle[filename];
-
-            this.emitFile({
-              type: "asset",
-              fileName: filename,
-              source: (file.source as string).replace(
-                /<\/head>/i,
-                `<script>replace-polyfill</script></head>`.replaceAll(
-                  "\\",
-                  "\\\\"
-                )
-              ),
-            });
-
-            continue;
-          }
-
           for (const compressionType of ["lossless", "lossy"] as const) {
             if (!assets[compressionType].has(filename)) {
               continue;
@@ -663,6 +645,15 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
             }
           }
         }
+      },
+    },
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        return html.replace(
+          /<\/head>/i,
+          `<script>replace-polyfill</script></head>`.replaceAll("\\", "\\\\")
+        );
       },
     },
   };
