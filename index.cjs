@@ -299,7 +299,7 @@ function imageminUpload(userOptions = {}) {
             }
         },
         generateBundle: {
-            order: "post",
+            order: null,
             async handler(outputOptions, bundle) {
                 for (const compressionType of ["lossless", "lossy"]) {
                     for (let filename of publicAssets[compressionType]) {
@@ -323,6 +323,7 @@ function imageminUpload(userOptions = {}) {
                 }
                 if (!polyfill)
                     return;
+                const deleteFiles = [];
                 for (const [filename, file] of Object.entries(bundle)) {
                     if (file.type !== "asset")
                         continue;
@@ -356,6 +357,8 @@ function imageminUpload(userOptions = {}) {
                                 uploads.push(upload(newFilebasename, newBuffer, options));
                                 if (filename === newFilename) {
                                     delete bundle[filename];
+                                    if (baseURL)
+                                        deleteFiles.push(filename);
                                 }
                                 if (!baseURL) {
                                     this.emitFile({
@@ -374,6 +377,13 @@ function imageminUpload(userOptions = {}) {
                                 chalk.red(error.message));
                         }
                     }
+                }
+                for (const [, file] of Object.entries(bundle)) {
+                    if (file.type !== "chunk")
+                        continue;
+                    deleteFiles.forEach((filename) => {
+                        file.viteMetadata?.importedAssets.delete(cleanUrl(this.getFileName(filename)));
+                    });
                 }
             },
         },

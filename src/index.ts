@@ -539,7 +539,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
       }
     },
     generateBundle: {
-      order: "post",
+      order: null,
       async handler(outputOptions, bundle) {
         for (const compressionType of ["lossless", "lossy"] as const) {
           for (let filename of publicAssets[compressionType]) {
@@ -572,6 +572,8 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
         }
 
         if (!polyfill) return;
+
+        const deleteFiles = [];
 
         for (const [filename, file] of Object.entries(bundle)) {
           if (file.type !== "asset") continue;
@@ -627,6 +629,8 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
 
                 if (filename === newFilename) {
                   delete bundle[filename];
+
+                  if (baseURL) deleteFiles.push(filename);
                 }
 
                 if (!baseURL) {
@@ -648,6 +652,16 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
               );
             }
           }
+        }
+
+        for (const [, file] of Object.entries(bundle)) {
+          if (file.type !== "chunk") continue;
+
+          deleteFiles.forEach((filename) => {
+            file.viteMetadata?.importedAssets.delete(
+              cleanUrl(this.getFileName(filename))
+            );
+          });
         }
       },
     },
