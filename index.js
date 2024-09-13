@@ -363,7 +363,7 @@ function imageminUpload(userOptions = {}) {
                                     });
                                 }
                             }
-                            Promise.all(uploads);
+                            await Promise.all(uploads);
                         }
                         catch (error) {
                             console.log("\n[vite:imagemin-upload] " +

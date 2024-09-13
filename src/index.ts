@@ -638,7 +638,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
                 }
               }
 
-              Promise.all(uploads);
+              await Promise.all(uploads);
             } catch (error) {
               console.log(
                 "\n[vite:imagemin-upload] " +
