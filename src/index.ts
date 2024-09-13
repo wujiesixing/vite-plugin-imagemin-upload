@@ -658,9 +658,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
           if (file.type !== "chunk") continue;
 
           deleteFiles.forEach((filename) => {
-            file.viteMetadata?.importedAssets.delete(
-              cleanUrl(this.getFileName(filename))
-            );
+            file.viteMetadata?.importedAssets.delete(cleanUrl(filename));
           });
         }
       },

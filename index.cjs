@@ -382,7 +382,7 @@ function imageminUpload(userOptions = {}) {
                     if (file.type !== "chunk")
                         continue;
                     deleteFiles.forEach((filename) => {
-                        file.viteMetadata?.importedAssets.delete(cleanUrl(this.getFileName(filename)));
+                        file.viteMetadata?.importedAssets.delete(cleanUrl(filename));
                     });
                 }
             },
