@@ -148,21 +148,21 @@ async function compression(filename, buffer, options, compressionType) {
 }
 let s3Client;
 let ossClient;
-function upload(filebasename, buffer, options) {
+async function upload(filebasename, buffer, options) {
     if (options.s3) {
         const opts = options.s3;
         if (!s3Client) {
             s3Client = new clientS3.S3Client(opts.client);
         }
         const filename = joinURL(opts.dir, filebasename);
-        s3Client
+        await s3Client
             .send(new clientS3.HeadObjectCommand({
             ...opts.head,
             Key: filename,
         }))
-            .catch((error) => {
+            .catch(async (error) => {
             if (error.name === "NotFound") {
-                s3Client
+                await s3Client
                     .send(new clientS3.PutObjectCommand({
                     ...opts.put,
                     Key: filename,
@@ -193,9 +193,9 @@ function upload(filebasename, buffer, options) {
             ossClient = new OSS(opts.client);
         }
         const filename = joinURL(opts.dir, filebasename);
-        ossClient.head(filename, opts.head).catch((error) => {
+        await ossClient.head(filename, opts.head).catch(async (error) => {
             if (error.code === "NoSuchKey") {
-                ossClient
+                await ossClient
                     .put(filename, buffer, opts.put)
                     .then(() => {
                     console.log("\n[vite:imagemin-upload] " +
@@ -351,8 +351,9 @@ function imageminUpload(userOptions = {}) {
                         }
                         const buffer = Buffer.from(file.source);
                         try {
+                            const uploads = [];
                             for (let { filename: newFilename, filebasename: newFilebasename, buffer: newBuffer, } of await compression(filename, buffer, options, compressionType)) {
-                                upload(newFilebasename, newBuffer, options);
+                                uploads.push(upload(newFilebasename, newBuffer, options));
                                 if (filename === newFilename) {
                                     delete bundle[filename];
                                 }
@@ -364,6 +365,7 @@ function imageminUpload(userOptions = {}) {
                                     });
                                 }
                             }
+                            Promise.all(uploads);
                         }
                         catch (error) {
                             console.log("\n[vite:imagemin-upload] " +

@@ -317,7 +317,7 @@ async function compression(
 
 let s3Client: S3Client;
 let ossClient: OSS;
-function upload(filebasename: string, buffer: Buffer, options: Options) {
+async function upload(filebasename: string, buffer: Buffer, options: Options) {
   if (options.s3) {
     const opts = options.s3;
 
@@ -327,16 +327,16 @@ function upload(filebasename: string, buffer: Buffer, options: Options) {
 
     const filename = joinURL(opts.dir, filebasename);
 
-    s3Client
+    await s3Client
       .send(
         new HeadObjectCommand({
           ...opts.head,
           Key: filename,
         })
       )
-      .catch((error) => {
+      .catch(async (error) => {
         if (error.name === "NotFound") {
-          s3Client
+          await s3Client
             .send(
               new PutObjectCommand({
                 ...opts.put,
@@ -382,9 +382,9 @@ function upload(filebasename: string, buffer: Buffer, options: Options) {
 
     const filename = joinURL(opts.dir, filebasename);
 
-    ossClient.head(filename, opts.head).catch((error) => {
+    await ossClient.head(filename, opts.head).catch(async (error) => {
       if (error.code === "NoSuchKey") {
-        ossClient
+        await ossClient
           .put(filename, buffer, opts.put)
           .then(() => {
             console.log(
@@ -611,6 +611,8 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
 
             const buffer = Buffer.from(file.source);
             try {
+              const uploads = [];
+
               for (let {
                 filename: newFilename,
                 filebasename: newFilebasename,
@@ -621,7 +623,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
                 options,
                 compressionType
               )) {
-                upload(newFilebasename, newBuffer, options);
+                uploads.push(upload(newFilebasename, newBuffer, options));
 
                 if (filename === newFilename) {
                   delete bundle[filename];
@@ -635,6 +637,8 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
                   });
                 }
               }
+
+              Promise.all(uploads);
             } catch (error) {
               console.log(
                 "\n[vite:imagemin-upload] " +
