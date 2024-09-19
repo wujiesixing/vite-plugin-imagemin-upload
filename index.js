@@ -12,11 +12,14 @@ import imageminPngquant from 'imagemin-pngquant';
 import imageminSvgo from 'imagemin-svgo';
 import imageminWebp from 'imagemin-webp';
 import { defaultsDeep } from 'lodash-es';
-import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
-import { basename, resolve, dirname, extname } from 'node:path';
+import { join, basename, resolve, dirname, extname } from 'node:path';
 import postcss from 'postcss';
 import webpInCssPlugin from 'webp-in-css/plugin.js';
+
+var name = "vite-plugin-imagemin-upload";
 
 const getDefaultOptions = () => ({
     mode: "production",
@@ -58,6 +61,9 @@ function joinURL(base, ...paths) {
             return url;
         return url.replace(/\/$/, "") + "/" + path.replace(/^\//, "");
     }, base);
+}
+function createMD5(data) {
+    return createHash("md5").update(data).digest("hex");
 }
 function getPlugins(filename, options, compressionType) {
     const plugins = [];
@@ -144,9 +150,21 @@ async function compression(filename, buffer, options, compressionType) {
         };
     }));
 }
+const rootDir = process.cwd();
+const cacheDir = join(rootDir, "node_modules/.cache", name);
+const cacheUploadedFile = join(cacheDir, "uploaded.json");
+let uploaded = existsSync(cacheUploadedFile)
+    ? JSON.parse(readFileSync(cacheUploadedFile, "utf-8"))
+    : [];
 let s3Client;
 let ossClient;
 async function upload(filebasename, buffer, options) {
+    const md5 = createMD5(buffer);
+    const optionsStr = JSON.stringify(options);
+    if (uploaded.some((file) => file.md5 === md5 &&
+        file.filename === filebasename &&
+        file.options === optionsStr))
+        return;
     if (options.s3) {
         const opts = options.s3;
         if (!s3Client) {
@@ -167,6 +185,11 @@ async function upload(filebasename, buffer, options) {
                     Body: buffer,
                 }))
                     .then(() => {
+                    uploaded.push({
+                        md5,
+                        filename: filebasename,
+                        options: optionsStr,
+                    });
                     console.log("\n[vite:imagemin-upload] " +
                         chalk.green(`${filebasename} has been successfully uploaded to S3.`));
                 })
@@ -196,6 +219,11 @@ async function upload(filebasename, buffer, options) {
                 await ossClient
                     .put(filename, buffer, opts.put)
                     .then(() => {
+                    uploaded.push({
+                        md5,
+                        filename: filebasename,
+                        options: optionsStr,
+                    });
                     console.log("\n[vite:imagemin-upload] " +
                         chalk.green(`${filebasename} has been successfully uploaded to OSS.`));
                 })
@@ -367,6 +395,10 @@ function imageminUpload(userOptions = {}) {
                                 }
                             }
                             await Promise.all(uploads);
+                            if (!existsSync(cacheDir)) {
+                                await mkdir(cacheDir, { recursive: true });
+                            }
+                            await writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
                         }
                         catch (error) {
                             console.log("\n[vite:imagemin-upload] " +
