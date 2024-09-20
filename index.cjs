@@ -155,9 +155,7 @@ async function compression(filename, buffer, options, compressionType) {
 const rootDir = process.cwd();
 const cacheDir = node_path.join(rootDir, "node_modules/.cache", name);
 const cacheUploadedFile = node_path.join(cacheDir, "uploaded.json");
-let uploaded = node_fs.existsSync(cacheUploadedFile)
-    ? JSON.parse(node_fs.readFileSync(cacheUploadedFile, "utf-8"))
-    : [];
+let uploaded = [];
 let s3Client;
 let ossClient;
 async function upload(filebasename, buffer, options) {
@@ -257,6 +255,9 @@ const publicAssets = {
 };
 const noWebpAssets = new Set();
 function imageminUpload(userOptions = {}) {
+    if (node_fs.existsSync(cacheUploadedFile)) {
+        uploaded = JSON.parse(node_fs.readFileSync(cacheUploadedFile, "utf-8"));
+    }
     const options = lodashEs.defaultsDeep({}, userOptions, getDefaultOptions());
     if (options.s3?.baseURL && options.oss?.baseURL) {
         throw new Error("When setting up S3 and OSS simultaneously, only one baseURL is allowed!");
@@ -397,10 +398,6 @@ function imageminUpload(userOptions = {}) {
                                 }
                             }
                             await Promise.all(uploads);
-                            if (!node_fs.existsSync(cacheDir)) {
-                                await promises.mkdir(cacheDir, { recursive: true });
-                            }
-                            await promises.writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
                         }
                         catch (error) {
                             console.log("\n[vite:imagemin-upload] " +
@@ -410,6 +407,10 @@ function imageminUpload(userOptions = {}) {
                         }
                     }
                 }
+                if (!node_fs.existsSync(cacheDir)) {
+                    await promises.mkdir(cacheDir, { recursive: true });
+                }
+                await promises.writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
                 for (const [, file] of Object.entries(bundle)) {
                     if (file.type !== "chunk")
                         continue;

@@ -26,7 +26,7 @@ import imageminWebp, {
 } from "imagemin-webp";
 import { defaultsDeep } from "lodash-es";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import postcss from "postcss";
@@ -329,9 +329,7 @@ let uploaded: Array<{
   md5: string;
   filename: string;
   options: string;
-}> = existsSync(cacheUploadedFile)
-  ? JSON.parse(readFileSync(cacheUploadedFile, "utf-8"))
-  : [];
+}> = [];
 
 let s3Client: S3Client;
 let ossClient: OSS;
@@ -474,6 +472,10 @@ const publicAssets = {
 const noWebpAssets = new Set<string>();
 
 export function imageminUpload(userOptions: Options = {}): Plugin {
+  if (existsSync(cacheUploadedFile)) {
+    uploaded = JSON.parse(readFileSync(cacheUploadedFile, "utf-8"));
+  }
+
   const options: Options = defaultsDeep({}, userOptions, getDefaultOptions());
 
   if (options.s3?.baseURL && options.oss?.baseURL) {
@@ -686,14 +688,6 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
               }
 
               await Promise.all(uploads);
-
-              if (!existsSync(cacheDir)) {
-                await mkdir(cacheDir, { recursive: true });
-              }
-              await writeFile(
-                cacheUploadedFile,
-                JSON.stringify(uploaded, null, 2)
-              );
             } catch (error) {
               console.log(
                 "\n[vite:imagemin-upload] " +
@@ -704,6 +698,11 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
             }
           }
         }
+
+        if (!existsSync(cacheDir)) {
+          await mkdir(cacheDir, { recursive: true });
+        }
+        await writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
 
         for (const [, file] of Object.entries(bundle)) {
           if (file.type !== "chunk") continue;

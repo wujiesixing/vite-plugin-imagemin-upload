@@ -153,9 +153,7 @@ async function compression(filename, buffer, options, compressionType) {
 const rootDir = process.cwd();
 const cacheDir = join(rootDir, "node_modules/.cache", name);
 const cacheUploadedFile = join(cacheDir, "uploaded.json");
-let uploaded = existsSync(cacheUploadedFile)
-    ? JSON.parse(readFileSync(cacheUploadedFile, "utf-8"))
-    : [];
+let uploaded = [];
 let s3Client;
 let ossClient;
 async function upload(filebasename, buffer, options) {
@@ -255,6 +253,9 @@ const publicAssets = {
 };
 const noWebpAssets = new Set();
 function imageminUpload(userOptions = {}) {
+    if (existsSync(cacheUploadedFile)) {
+        uploaded = JSON.parse(readFileSync(cacheUploadedFile, "utf-8"));
+    }
     const options = defaultsDeep({}, userOptions, getDefaultOptions());
     if (options.s3?.baseURL && options.oss?.baseURL) {
         throw new Error("When setting up S3 and OSS simultaneously, only one baseURL is allowed!");
@@ -395,10 +396,6 @@ function imageminUpload(userOptions = {}) {
                                 }
                             }
                             await Promise.all(uploads);
-                            if (!existsSync(cacheDir)) {
-                                await mkdir(cacheDir, { recursive: true });
-                            }
-                            await writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
                         }
                         catch (error) {
                             console.log("\n[vite:imagemin-upload] " +
@@ -408,6 +405,10 @@ function imageminUpload(userOptions = {}) {
                         }
                     }
                 }
+                if (!existsSync(cacheDir)) {
+                    await mkdir(cacheDir, { recursive: true });
+                }
+                await writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
                 for (const [, file] of Object.entries(bundle)) {
                     if (file.type !== "chunk")
                         continue;
