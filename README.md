@@ -36,7 +36,7 @@ export default {
 #### Lossless Options:
 
 - `type`: 'asset' or 'public' (default: 'public')
-- `include`: A filter pattern for files to include in compression (default: `/\.(jpe?g|png|gif|svg)$/i`).
+- `include`: A filter pattern for files to include in compression (default: `/\.(jpe?g|png|gif)$/i`).
 - `exclude`: A filter pattern for files to exclude from compression.
 - `progressive`: Enable progressive compression for JPEGs (default: true).
 - `interlaced`: Enable interlaced compression for GIFs and PNGs (default: true).
@@ -53,7 +53,7 @@ export default {
 #### Lossy Options:
 
 - `type`: 'asset' or 'public' (default: 'asset')
-- `include`: A filter pattern for files to include in compression (default: `/\.(jpe?g|png|gif|svg)$/i`).
+- `include`: A filter pattern for files to include in compression (default: `/\.(jpe?g|png|gif)$/i`).
 - `exclude`: A filter pattern for files to exclude from compression.
 - `quality`: Quality setting for compression (default: 80).
 - `progressive`: Enable progressive compression for JPEGs (default: true).

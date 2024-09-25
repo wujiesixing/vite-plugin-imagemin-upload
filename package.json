@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-imagemin-upload",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Compress the image and then upload it to either AWS S3 or Aliyun OSS.",
   "type": "module",
   "main": "index.cjs",

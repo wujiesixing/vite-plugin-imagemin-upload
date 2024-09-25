@@ -27,7 +27,7 @@ const getDefaultOptions = () => ({
     mode: "production",
     lossless: {
         type: "public",
-        include: /\.(jpe?g|png|gif|svg)$/i,
+        include: /\.(jpe?g|png|gif)$/i,
         progressive: true,
         interlaced: true,
         gifsicle: true,
@@ -38,7 +38,7 @@ const getDefaultOptions = () => ({
     },
     lossy: {
         type: "asset",
-        include: /\.(jpe?g|png|gif|svg)$/i,
+        include: /\.(jpe?g|png|gif)$/i,
         quality: 80,
         progressive: true,
         interlaced: true,
