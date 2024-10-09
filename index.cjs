@@ -114,7 +114,40 @@ function getPlugins(filename, options, compressionType) {
     }
     return plugins;
 }
+const rootDir = process.cwd();
+const cacheDir = node_path.join(rootDir, "node_modules/.cache", name);
+const cacheImagesDir = node_path.join(cacheDir, "images");
+const cacheCompressedFile = node_path.join(cacheDir, "compressed.json");
+const cacheUploadedFile = node_path.join(cacheDir, "uploaded.json");
+let compressed = [];
+let uploaded = [];
 async function compression(filename, buffer, options, compressionType) {
+    const md5 = createMD5(buffer);
+    const optionsStr = JSON.stringify(options);
+    const cache = compressed.find((file) => file.md5 === md5 &&
+        file.filename === filename &&
+        file.options === optionsStr &&
+        file.compressionType === compressionType);
+    if (cache) {
+        try {
+            return cache.files.map((file) => {
+                const path = node_path.join(cacheImagesDir, file.filename);
+                return {
+                    filename: file.filename,
+                    filebasename: file.filebasename,
+                    buffer: node_fs.readFileSync(path),
+                };
+            });
+        }
+        catch (error) { }
+    }
+    const cacheIndex = compressed.push({
+        md5,
+        filename,
+        options: optionsStr,
+        compressionType,
+        files: [],
+    }) - 1;
     const filebasename = node_path.basename(filename);
     const fileextname = node_path.extname(filename);
     const size = buffer.byteLength;
@@ -145,6 +178,11 @@ async function compression(filename, buffer, options, compressionType) {
                     chalk.yellow(`You can add the parameter ${chalk.red(`no-webp`)} at the end of the image path to prevent conversion to webp.`));
             }
         }
+        await promises.writeFile(node_path.join(cacheImagesDir, newFilename), size <= newSize && isOriginExt ? buffer : newBuffer);
+        compressed[cacheIndex].files.push({
+            filename: newFilename,
+            filebasename: newFilebasename,
+        });
         return {
             filename: newFilename,
             filebasename: newFilebasename,
@@ -152,10 +190,6 @@ async function compression(filename, buffer, options, compressionType) {
         };
     }));
 }
-const rootDir = process.cwd();
-const cacheDir = node_path.join(rootDir, "node_modules/.cache", name);
-const cacheUploadedFile = node_path.join(cacheDir, "uploaded.json");
-let uploaded = [];
 let s3Client;
 let ossClient;
 async function upload(filebasename, buffer, options) {
@@ -255,6 +289,9 @@ const publicAssets = {
 };
 const noWebpAssets = new Set();
 function imageminUpload(userOptions = {}) {
+    if (node_fs.existsSync(cacheCompressedFile)) {
+        compressed = JSON.parse(node_fs.readFileSync(cacheCompressedFile, "utf-8"));
+    }
     if (node_fs.existsSync(cacheUploadedFile)) {
         uploaded = JSON.parse(node_fs.readFileSync(cacheUploadedFile, "utf-8"));
     }
@@ -410,6 +447,7 @@ function imageminUpload(userOptions = {}) {
                 if (!node_fs.existsSync(cacheDir)) {
                     await promises.mkdir(cacheDir, { recursive: true });
                 }
+                await promises.writeFile(cacheCompressedFile, JSON.stringify(compressed, null, 2));
                 await promises.writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
                 for (const [, file] of Object.entries(bundle)) {
                     if (file.type !== "chunk")
