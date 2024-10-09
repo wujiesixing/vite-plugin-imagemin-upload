@@ -176,7 +176,13 @@ async function compression(filename, buffer, options, compressionType) {
                     chalk.yellow(`You can add the parameter ${chalk.red(`no-webp`)} at the end of the image path to prevent conversion to webp.`));
             }
         }
-        await writeFile(join(cacheImagesDir, newFilename), size <= newSize && isOriginExt ? buffer : newBuffer);
+        const cacheFilePath = join(cacheImagesDir, newFilename);
+        const cacheFileDir = dirname(cacheFilePath);
+        const cacheFile = size <= newSize && isOriginExt ? buffer : newBuffer;
+        if (!existsSync(cacheFileDir)) {
+            await mkdir(cacheFileDir, { recursive: true });
+        }
+        await writeFile(cacheFilePath, cacheFile);
         compressed[cacheIndex].files.push({
             filename: newFilename,
             filebasename: newFilebasename,
@@ -184,7 +190,7 @@ async function compression(filename, buffer, options, compressionType) {
         return {
             filename: newFilename,
             filebasename: newFilebasename,
-            buffer: size <= newSize && isOriginExt ? buffer : newBuffer,
+            buffer: cacheFile,
         };
     }));
 }
@@ -445,7 +451,7 @@ function imageminUpload(userOptions = {}) {
                 if (!existsSync(cacheDir)) {
                     await mkdir(cacheDir, { recursive: true });
                 }
-                await writeFile(cacheCompressedFile, JSON.stringify(compressed, null, 2));
+                await writeFile(cacheCompressedFile, JSON.stringify(compressed.filter(({ files }) => files.length), null, 2));
                 await writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
                 for (const [, file] of Object.entries(bundle)) {
                     if (file.type !== "chunk")

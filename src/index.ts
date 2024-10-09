@@ -369,10 +369,14 @@ async function compression(
         }
       }
 
-      await writeFile(
-        join(cacheImagesDir, newFilename),
-        size <= newSize && isOriginExt ? buffer : newBuffer
-      );
+      const cacheFilePath = join(cacheImagesDir, newFilename);
+      const cacheFileDir = dirname(cacheFilePath);
+      const cacheFile = size <= newSize && isOriginExt ? buffer : newBuffer;
+
+      if (!existsSync(cacheFileDir)) {
+        await mkdir(cacheFileDir, { recursive: true });
+      }
+      await writeFile(cacheFilePath, cacheFile);
 
       compressed[cacheIndex].files.push({
         filename: newFilename,
@@ -382,7 +386,7 @@ async function compression(
       return {
         filename: newFilename,
         filebasename: newFilebasename,
-        buffer: size <= newSize && isOriginExt ? buffer : newBuffer,
+        buffer: cacheFile,
       };
     })
   );
@@ -765,7 +769,11 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
         }
         await writeFile(
           cacheCompressedFile,
-          JSON.stringify(compressed, null, 2)
+          JSON.stringify(
+            compressed.filter(({ files }) => files.length),
+            null,
+            2
+          )
         );
         await writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
 
