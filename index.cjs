@@ -15,7 +15,6 @@ var imageminSvgo = require('imagemin-svgo');
 var imageminWebp = require('imagemin-webp');
 var lodashEs = require('lodash-es');
 var node_crypto = require('node:crypto');
-var node_fs = require('node:fs');
 var promises = require('node:fs/promises');
 var node_path = require('node:path');
 var postcss = require('postcss');
@@ -130,14 +129,15 @@ async function compression(filename, buffer, options, compressionType) {
         file.compressionType === compressionType);
     if (cache) {
         try {
-            return cache.files.map((file) => {
+            return await Promise.all(cache.files.map(async (file) => {
                 const path = node_path.join(cacheImagesDir, file.filename);
+                const buffer = await promises.readFile(path);
                 return {
                     filename: file.filename,
                     filebasename: file.filebasename,
-                    buffer: node_fs.readFileSync(path),
+                    buffer,
                 };
-            });
+            }));
         }
         catch (error) { }
     }
@@ -181,9 +181,7 @@ async function compression(filename, buffer, options, compressionType) {
         const cacheFilePath = node_path.join(cacheImagesDir, newFilename);
         const cacheFileDir = node_path.dirname(cacheFilePath);
         const cacheFile = size <= newSize && isOriginExt ? buffer : newBuffer;
-        if (!node_fs.existsSync(cacheFileDir)) {
-            await promises.mkdir(cacheFileDir, { recursive: true });
-        }
+        await promises.mkdir(cacheFileDir, { recursive: true });
         await promises.writeFile(cacheFilePath, cacheFile);
         compressed[cacheIndex].files.push({
             filename: newFilename,
@@ -295,12 +293,6 @@ const publicAssets = {
 };
 const noWebpAssets = new Set();
 function imageminUpload(userOptions = {}) {
-    if (node_fs.existsSync(cacheCompressedFile)) {
-        compressed = JSON.parse(node_fs.readFileSync(cacheCompressedFile, "utf-8"));
-    }
-    if (node_fs.existsSync(cacheUploadedFile)) {
-        uploaded = JSON.parse(node_fs.readFileSync(cacheUploadedFile, "utf-8"));
-    }
     const options = lodashEs.defaultsDeep({}, userOptions, getDefaultOptions());
     if (options.s3?.baseURL && options.oss?.baseURL) {
         throw new Error("When setting up S3 and OSS simultaneously, only one baseURL is allowed!");
@@ -317,6 +309,18 @@ function imageminUpload(userOptions = {}) {
     return {
         name: "vite:imagemin-upload",
         apply: "build",
+        async buildStart() {
+            try {
+                const compressedData = await promises.readFile(cacheCompressedFile, "utf-8");
+                compressed = JSON.parse(compressedData);
+            }
+            catch (error) { }
+            try {
+                const uploadedData = await promises.readFile(cacheUploadedFile, "utf-8");
+                uploaded = JSON.parse(uploadedData);
+            }
+            catch (error) { }
+        },
         config(config, { mode }) {
             if (mode === options.mode) {
                 if (!config.experimental)
@@ -379,9 +383,7 @@ function imageminUpload(userOptions = {}) {
                         const dir = node_path.resolve(outDir, node_path.dirname(filename));
                         try {
                             for (let { filebasename: newFilebasename, buffer: newBuffer, } of await compression(filename, buffer, options, compressionType)) {
-                                if (!node_fs.existsSync(dir)) {
-                                    await promises.mkdir(dir, { recursive: true });
-                                }
+                                await promises.mkdir(dir, { recursive: true });
                                 await promises.writeFile(node_path.resolve(dir, newFilebasename), newBuffer);
                             }
                         }
@@ -450,9 +452,7 @@ function imageminUpload(userOptions = {}) {
                         }
                     }
                 }
-                if (!node_fs.existsSync(cacheDir)) {
-                    await promises.mkdir(cacheDir, { recursive: true });
-                }
+                await promises.mkdir(cacheDir, { recursive: true });
                 await promises.writeFile(cacheCompressedFile, JSON.stringify(compressed.filter(({ files }) => files.length), null, 2));
                 await promises.writeFile(cacheUploadedFile, JSON.stringify(uploaded, null, 2));
                 for (const [, file] of Object.entries(bundle)) {
