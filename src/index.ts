@@ -26,7 +26,6 @@ import imageminWebp, {
 } from "imagemin-webp";
 import { defaultsDeep } from "lodash-es";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import postcss from "postcss";
@@ -289,15 +288,17 @@ async function compression(
 
   if (cache) {
     try {
-      return cache.files.map((file) => {
-        const path = join(cacheImagesDir, file.filename);
-
-        return {
-          filename: file.filename,
-          filebasename: file.filebasename,
-          buffer: readFileSync(path),
-        };
-      });
+      return await Promise.all(
+        cache.files.map(async (file) => {
+          const path = join(cacheImagesDir, file.filename);
+          const buffer = await readFile(path);
+          return {
+            filename: file.filename,
+            filebasename: file.filebasename,
+            buffer,
+          };
+        })
+      );
     } catch (error) {}
   }
 
@@ -373,9 +374,7 @@ async function compression(
       const cacheFileDir = dirname(cacheFilePath);
       const cacheFile = size <= newSize && isOriginExt ? buffer : newBuffer;
 
-      if (!existsSync(cacheFileDir)) {
-        await mkdir(cacheFileDir, { recursive: true });
-      }
+      await mkdir(cacheFileDir, { recursive: true });
       await writeFile(cacheFilePath, cacheFile);
 
       compressed[cacheIndex].files.push({
@@ -533,14 +532,6 @@ const publicAssets = {
 const noWebpAssets = new Set<string>();
 
 export function imageminUpload(userOptions: Options = {}): Plugin {
-  if (existsSync(cacheCompressedFile)) {
-    compressed = JSON.parse(readFileSync(cacheCompressedFile, "utf-8"));
-  }
-
-  if (existsSync(cacheUploadedFile)) {
-    uploaded = JSON.parse(readFileSync(cacheUploadedFile, "utf-8"));
-  }
-
   const options: Options = defaultsDeep({}, userOptions, getDefaultOptions());
 
   if (options.s3?.baseURL && options.oss?.baseURL) {
@@ -567,6 +558,16 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
   return {
     name: "vite:imagemin-upload",
     apply: "build",
+    async buildStart() {
+      try {
+        const compressedData = await readFile(cacheCompressedFile, "utf-8");
+        compressed = JSON.parse(compressedData);
+      } catch (error) {}
+      try {
+        const uploadedData = await readFile(cacheUploadedFile, "utf-8");
+        uploaded = JSON.parse(uploadedData);
+      } catch (error) {}
+    },
     config(config, { mode }) {
       if (mode === options.mode) {
         if (!config.experimental) config.experimental = {};
@@ -665,9 +666,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
                 options,
                 compressionType
               )) {
-                if (!existsSync(dir)) {
-                  await mkdir(dir, { recursive: true });
-                }
+                await mkdir(dir, { recursive: true });
                 await writeFile(resolve(dir, newFilebasename), newBuffer);
               }
             } catch (error) {
@@ -764,9 +763,7 @@ export function imageminUpload(userOptions: Options = {}): Plugin {
           }
         }
 
-        if (!existsSync(cacheDir)) {
-          await mkdir(cacheDir, { recursive: true });
-        }
+        await mkdir(cacheDir, { recursive: true });
         await writeFile(
           cacheCompressedFile,
           JSON.stringify(
